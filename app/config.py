@@ -4,7 +4,7 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     # Project info
-    PROJECT_NAME: str = "Wavepool Video API"
+    PROJECT_NAME: str = "Wavereplay Video API"
     ENVIRONMENT: str = "development"
 
     # Server settings
@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     # Supabase
     SUPABASE_URL: str
     SUPABASE_KEY: str
+    JWT_SECRET: str
 
     class Config:
         env_file = ".env"

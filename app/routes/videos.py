@@ -1,45 +1,86 @@
-from fastapi import APIRouter, HTTPException
-from typing import List, Dict
-from app.database import supabase
+from fastapi import FastAPI, HTTPException, APIRouter
+from pydantic import BaseModel
+from datetime import datetime
+from typing import Optional
+import logging
+import os
+from dotenv import load_dotenv
+from supabase import create_client, Client
+
+load_dotenv()
+url: str = os.environ.get("SUPABASE_URL")
+key: str = os.environ.get("SUPABASE_KEY")
+
+supabase: Client = create_client(url, key)
+
+
+class VideoCreate(BaseModel):
+    title: str
+    url: str
+    recording_timestamp: datetime
+    duration: float
+    created_at: Optional[datetime] = None
+    order_in_session: Optional[int] = None
+    file_size: int
+    file_format: str
+    resolution: str
+    session: int
+
+
+class VideoResponse(BaseModel):
+    id: int
+    title: str
+    url: str
+    recording_timestamp: datetime
+    duration: float
+    created_at: datetime
+    order_in_session: Optional[int]
+    file_size: int
+    file_format: str
+    resolution: str
+    session: int
+
+    class Config:
+        from_attributes = True
+
+
+logger = logging.getLogger(__name__)
+
+app = FastAPI()
 
 router = APIRouter(prefix="/api/videos", tags=["videos"])
 
 
-@router.get("/")
-async def list_videos() -> List[Dict]:
+@router.post("/", response_model=VideoResponse)
+async def create_video(video: VideoCreate):
     try:
-        response = supabase.table('videos').select("*").execute()
-        return response.data
+        logger.debug(video)
+        return video
+
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to create video record: {str(e)}"
+        )
 
 
 @router.get("/{video_id}")
-async def get_video(video_id: int) -> Dict:
+async def get_video(video_id: int):
     try:
-        response = supabase.table('videos').select("*").eq('id', video_id).single().execute()
-        if not response.data:
+        result = supabase.table('fastapi_test').select("*").eq('id', video_id).execute()
+
+        if not result.data:
             raise HTTPException(status_code=404, detail="Video not found")
-        return response.data
+
+        return result
+
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to retrieve video: {str(e)}"
+        )
 
 
-@router.post("/")
-async def create_video(video: Dict) -> Dict:
-    try:
-        response = supabase.table('videos').insert(video).execute()
-        return response.data[0]
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
-
-@router.delete("/{video_id}")
-async def delete_video(video_id: int) -> Dict:
-    try:
-        response = supabase.table('videos').delete().eq('id', video_id).execute()
-        if not response.data:
-            raise HTTPException(status_code=404, detail="Video not found")
-        return {"message": "Video deleted successfully"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+@router.get("/")
+async def hellow():
+    return {'message': [url, key]}
